@@ -1,0 +1,141 @@
+import { memo, useMemo, useState, useDeferredValue } from "react";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
+import hljs from "highlight.js/lib/core";
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import python from "highlight.js/lib/languages/python";
+import json from "highlight.js/lib/languages/json";
+import bash from "highlight.js/lib/languages/bash";
+import rust from "highlight.js/lib/languages/rust";
+import css from "highlight.js/lib/languages/css";
+import xml from "highlight.js/lib/languages/xml";
+import markdown from "highlight.js/lib/languages/markdown";
+import sql from "highlight.js/lib/languages/sql";
+import yaml from "highlight.js/lib/languages/yaml";
+import powershell from "highlight.js/lib/languages/powershell";
+import ini from "highlight.js/lib/languages/ini";
+import go from "highlight.js/lib/languages/go";
+import java from "highlight.js/lib/languages/java";
+import cpp from "highlight.js/lib/languages/cpp";
+import csharp from "highlight.js/lib/languages/csharp";
+import diff from "highlight.js/lib/languages/diff";
+import { IconCopy, IconCheck } from "./icons";
+
+for (const [name, lang] of Object.entries({
+  javascript, typescript: { ...typescript, name: "typescript" }, python, json, bash, rust,
+  css, xml, markdown, sql, yaml, ini, powershell, go, java, cpp, csharp, diff,
+})) {
+  hljs.registerLanguage(name, lang as never);
+}
+hljs.configure({ ignoreUnescapedHTML: true });
+
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+});
+
+export function highlightCode(code: string, lang: string): { html: string; language: string } {
+  const language = (lang || "").toLowerCase();
+  if (language && hljs.getLanguage(language)) {
+    return { html: hljs.highlight(code, { language }).value, language };
+  }
+  const auto = hljs.highlightAuto(code, ["javascript", "typescript", "python", "json", "bash", "rust"]);
+  return { html: auto.value, language: language || auto.language || "" };
+}
+
+function CodeBlock({ code, lang }: { code: string; lang: string }) {
+  const [copied, setCopied] = useState(false);
+  const { html } = useMemo(() => highlightCode(code, lang), [code, lang]);
+  const copy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  return (
+    <div className="codeblock">
+      <div className="codeblock-head">
+        <span className="codeblock-lang">{lang || "code"}</span>
+        <button className="icon-btn" onClick={copy} title="Copy code" aria-label="Copy code">
+          {copied ? <IconCheck size={13} /> : <IconCopy size={13} />}
+        </button>
+      </div>
+      <pre>
+        <code className={`hljs`} dangerouslySetInnerHTML={{ __html: html }} />
+      </pre>
+    </div>
+  );
+}
+
+/**
+ * Renders model output markdown. Model content is untrusted input:
+ * sanitized with DOMPurify before it ever reaches the DOM.
+ */
+export const Markdown = memo(function Markdown({ content }: { content: string }) {
+  const deferred = useDeferredValue(content);
+  const html = useMemo(() => {
+    const raw = marked.parse(deferred ?? "", { async: false }) as string;
+    return DOMPurify.sanitize(raw, {
+      FORBID_TAGS: ["style", "form", "input", "iframe", "script"],
+      FORBID_ATTR: ["style", "onerror", "onclick"],
+    });
+  }, [deferred]);
+
+  return (
+    <div
+      className="markdown"
+      onClick={(e) => {
+        // intercept code fences for copyable blocks
+        const target = e.target as HTMLElement;
+        if (target.tagName === "PRE") return;
+      }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+});
+
+/** Split markdown into code blocks so we can attach copy buttons. */
+export const RichMarkdown = memo(function RichMarkdown({ content }: { content: string }) {
+  const parts = useMemo(() => splitCodeFences(content ?? ""), [content]);
+  return (
+    <div className="markdown">
+      {parts.map((p, i) =>
+        p.type === "code" ? (
+          <CodeBlock key={i} code={p.text} lang={p.lang} />
+        ) : (
+          <PlainMarkdown key={i} content={p.text} />
+        )
+      )}
+    </div>
+  );
+});
+
+const PlainMarkdown = memo(function PlainMarkdown({ content }: { content: string }) {
+  const deferred = useDeferredValue(content);
+  const html = useMemo(() => {
+    const raw = marked.parse(deferred, { async: false }) as string;
+    return DOMPurify.sanitize(raw, { FORBID_TAGS: ["style", "form", "input", "iframe"] });
+  }, [deferred]);
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+});
+
+type Part = { type: "text" | "code"; text: string; lang: string };
+
+export function splitCodeFences(text: string): Part[] {
+  const parts: Part[] = [];
+  const fence = /```([\w+-]*)\n?([\s\S]*?)(?:```|$)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = fence.exec(text)) !== null) {
+    if (m.index > last) {
+      parts.push({ type: "text", text: text.slice(last, m.index), lang: "" });
+    }
+    parts.push({ type: "code", text: m[2].replace(/\n$/, ""), lang: m[1] || "" });
+    last = fence.lastIndex;
+  }
+  if (last < text.length) {
+    parts.push({ type: "text", text: text.slice(last), lang: "" });
+  }
+  return parts.length ? parts : [{ type: "text", text, lang: "" }];
+}
