@@ -24,3 +24,7 @@ desktop.ini
 .idea/
 .vscode/
 *.swp
+
+# Diagnostics
+*.png
+!src-tauri/icons/*.png

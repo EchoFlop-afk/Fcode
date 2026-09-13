@@ -22,11 +22,33 @@ import csharp from "highlight.js/lib/languages/csharp";
 import diff from "highlight.js/lib/languages/diff";
 import { IconCopy, IconCheck } from "./icons";
 
-for (const [name, lang] of Object.entries({
-  javascript, typescript: { ...typescript, name: "typescript" }, python, json, bash, rust,
-  css, xml, markdown, sql, yaml, ini, powershell, go, java, cpp, csharp, diff,
-})) {
-  hljs.registerLanguage(name, lang as never);
+// highlight.js language modules export registration functions; alias them
+// explicitly (spreading them into objects breaks registerLanguage).
+const LANGUAGES: [string, Parameters<typeof hljs.registerLanguage>[1]][] = [
+  ["javascript", javascript],
+  ["typescript", typescript],
+  ["python", python],
+  ["json", json],
+  ["bash", bash],
+  ["rust", rust],
+  ["css", css],
+  ["xml", xml],
+  ["html", xml],
+  ["markdown", markdown],
+  ["sql", sql],
+  ["yaml", yaml],
+  ["toml", ini],
+  ["ini", ini],
+  ["powershell", powershell],
+  ["go", go],
+  ["java", java],
+  ["cpp", cpp],
+  ["c", cpp],
+  ["csharp", csharp],
+  ["diff", diff],
+];
+for (const [name, lang] of LANGUAGES) {
+  hljs.registerLanguage(name, lang);
 }
 hljs.configure({ ignoreUnescapedHTML: true });
 
