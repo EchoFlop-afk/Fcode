@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useUi } from "../state/ui";
 import { useChat } from "../state/chat";
 import {
-  IconPlus, IconSearch, IconSettings, IconFolder, IconChart, IconChat,
+  IconPlus, IconSearch, IconSettings, IconFolder, IconChart, IconSidebar,
   IconTrash, IconPin, IconEdit, IconTerminal,
 } from "./icons";
 import { formatRelativeTime, truncate } from "../core/util/misc";
@@ -14,7 +14,7 @@ export function Sidebar() {
     return (
       <div className="sidebar collapsed">
         <button className="icon-btn big" onClick={toggleSidebar} title="Expand sidebar" aria-label="Expand sidebar">
-          <IconChat size={16} />
+          <IconSidebar size={16} />
         </button>
         <button className="icon-btn big" onClick={() => setView("chat")} title="New chat" aria-label="New chat">
           <IconPlus size={16} />
@@ -36,13 +36,14 @@ export function Sidebar() {
         <button className="btn primary block" onClick={() => { useChat.getState().newConversation(); setView("chat"); }}>
           <IconPlus size={14} /> New Chat
         </button>
-        <button className="icon-btn" onClick={toggleSidebar} title="Collapse sidebar" aria-label="Collapse sidebar">
-          <IconChat size={15} />
+        <button className="icon-btn" onClick={toggleSidebar} title="Collapse sidebar (Ctrl+B)" aria-label="Collapse sidebar">
+          <IconSidebar size={15} />
         </button>
       </div>
       <ConversationSearch />
+      <div className="side-label">Chats</div>
       <ConversationList />
-      <div className="sidebar-nav">
+      <div className="sidebar-foot">
         <NavButton view={view} setView={setView} target="projects" icon={<IconFolder size={15} />} label="Projects" />
         <NavButton view={view} setView={setView} target="hub" icon={<IconTerminal size={15} />} label="Models" />
         <NavButton view={view} setView={setView} target="usage" icon={<IconChart size={15} />} label="Usage" />

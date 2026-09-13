@@ -44,18 +44,23 @@ function languageFor(path: string) {
 
 // Restrained theme matching the app tokens.
 const fcodeTheme = EditorView.theme({
-  "&": { backgroundColor: "var(--bg)", color: "var(--text)", fontSize: "12.5px" },
-  ".cm-content": { fontFamily: "var(--mono)", caretColor: "var(--accent)", padding: "8px 0" },
-  ".cm-gutters": { backgroundColor: "var(--bg)", color: "#3d4249", border: "none", borderRight: "1px solid var(--border)" },
+  "&": { backgroundColor: "var(--bg0)", color: "var(--text)", fontSize: "12.5px" },
+  ".cm-content": { fontFamily: "var(--mono)", caretColor: "var(--accent)", padding: "10px 0" },
+  ".cm-gutters": {
+    backgroundColor: "var(--bg0)",
+    color: "var(--faint)",
+    border: "none",
+    borderRight: "1px solid var(--line)",
+  },
   ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--dim)" },
-  ".cm-activeLine": { backgroundColor: "rgba(124,179,66,0.04)" },
-  ".cm-selectionBackground, ::selection": { backgroundColor: "#2c3a22 !important" },
+  ".cm-activeLine": { backgroundColor: "rgba(124,179,66,0.045)" },
+  ".cm-selectionBackground, ::selection": { backgroundColor: "rgba(124,179,66,0.22) !important" },
   ".cm-cursor": { borderLeftColor: "var(--accent)" },
-  ".cm-scroller": { overflow: "auto", lineHeight: "1.55" },
-  ".cm-tooltip": { backgroundColor: "var(--bg-raised)", border: "1px solid var(--border)" },
-  ".cm-panels": { backgroundColor: "var(--bg-raised)", color: "var(--text)" },
-  ".cm-searchMatch": { backgroundColor: "#3a4a2c" },
-  ".cm-searchMatch-selected": { backgroundColor: "#556b3a" },
+  ".cm-scroller": { overflow: "auto", lineHeight: "1.6" },
+  ".cm-tooltip": { backgroundColor: "var(--bg2)", border: "1px solid var(--line2)", borderRadius: "8px" },
+  ".cm-panels": { backgroundColor: "var(--bg2)", color: "var(--text)" },
+  ".cm-searchMatch": { backgroundColor: "rgba(124,179,66,0.18)" },
+  ".cm-searchMatch-selected": { backgroundColor: "rgba(124,179,66,0.35)" },
 });
 
 export function EditorPane() {
