@@ -192,3 +192,5 @@ All providers are integrated through their documented public APIs.
   `server.port` in `vite.config.ts`.
 - **Build errors on Rust** — ensure the MSVC toolchain and Windows SDK are
   installed (`rustup show` should list `stable-x86_64-pc-windows-msvc`).
+#   F c o d e  
+ 
