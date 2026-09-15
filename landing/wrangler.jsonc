@@ -1,0 +1,9 @@
+{
+  // Assets-only Worker: serves ./dist statically, no script. Deploy: npx wrangler deploy
+  "name": "fcode",
+  "compatibility_date": "2025-12-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
