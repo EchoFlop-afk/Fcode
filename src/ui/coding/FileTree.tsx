@@ -75,6 +75,40 @@ export function FileTree() {
   );
 }
 
+const FT_LABELS: Record<string, string> = {
+  ts: "TS", tsx: "TS", mts: "TS", cts: "TS",
+  js: "JS", jsx: "JS", mjs: "JS", cjs: "JS",
+  json: "{}", jsonc: "{}",
+  md: "MD", mdx: "MD",
+  css: "#", scss: "#", less: "#",
+  html: "<>", htm: "<>", vue: "<>", svelte: "<>",
+  py: "PY", rs: "RS",
+};
+
+const IMG_LABELS: Record<string, string> = {
+  png: "PNG", jpg: "JPG", jpeg: "JPG", gif: "GIF", webp: "WEB",
+  bmp: "BMP", ico: "ICO", svg: "SVG", avif: "AVI",
+};
+
+function FileGlyph({ name }: { name: string }) {
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  const imgLabel = IMG_LABELS[ext];
+  if (imgLabel) {
+    return (
+      <span className="ft-icon" data-ft="img" aria-hidden>
+        {imgLabel}
+      </span>
+    );
+  }
+  const ft = FT_LABELS[ext] ? ext : null;
+  if (!ft) return <IconFile size={12} className="dim" />;
+  return (
+    <span className="ft-icon" data-ft={ft} aria-hidden>
+      {FT_LABELS[ft]}
+    </span>
+  );
+}
+
 function TreeNode({
   entry, depth, activeTab, onOpen,
 }: {
@@ -101,9 +135,11 @@ function TreeNode({
         aria-expanded={isDir ? expanded : undefined}
       >
         {isDir ? (
-          expanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />
+          <span className="tree-chevron" style={{ display: "inline-flex" }}>
+            {expanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
+          </span>
         ) : (
-          <IconFile size={12} className="dim" />
+          <FileGlyph name={entry.name} />
         )}
         <span className="tree-name">{entry.name}</span>
         {!isDir && entry.size > 0 && <span className="tree-size">{formatTokens(entry.size)}b</span>}
@@ -122,9 +158,10 @@ function TreeNode({
 }
 
 function FileRow({ entry, activeTab, onOpen }: { entry: FileEntry; depth: number; activeTab: string | null; onOpen: () => void }) {
+  const isDir = entry.kind === "dir";
   return (
-    <div className={`tree-row${activeTab === entry.path ? " active" : ""}`} onClick={onOpen}>
-      {entry.kind === "dir" ? <IconFolder size={12} /> : <IconFile size={12} className="dim" />}
+    <div className={`tree-row${!isDir && activeTab === entry.path ? " active" : ""}`} onClick={onOpen}>
+      {isDir ? <IconFolder size={12} /> : <FileGlyph name={entry.path} />}
       <span className="tree-name">{entry.path}</span>
     </div>
   );

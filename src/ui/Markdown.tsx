@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useDeferredValue } from "react";
+import { memo, useMemo, useRef, useState, useDeferredValue } from "react";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/core";
@@ -20,7 +20,10 @@ import java from "highlight.js/lib/languages/java";
 import cpp from "highlight.js/lib/languages/cpp";
 import csharp from "highlight.js/lib/languages/csharp";
 import diff from "highlight.js/lib/languages/diff";
-import { IconCopy, IconCheck } from "./icons";
+import { IconCopy, IconCheck, IconFolder } from "./icons";
+import { api } from "../core/api/ipc";
+import { useProject } from "../state/project";
+import { useUi } from "../state/ui";
 
 // highlight.js language modules export registration functions; alias them
 // explicitly (spreading them into objects breaks registerLanguage).
@@ -66,22 +69,105 @@ export function highlightCode(code: string, lang: string): { html: string; langu
   return { html: auto.value, language: language || auto.language || "" };
 }
 
+const EXT_BY_LANG: Record<string, string> = {
+  typescript: "ts", ts: "ts", tsx: "tsx",
+  javascript: "js", js: "js", jsx: "jsx",
+  python: "py", py: "py",
+  bash: "sh", shell: "sh", sh: "sh", powershell: "ps1",
+  rust: "rs", json: "json", css: "css", html: "html", xml: "xml",
+  markdown: "md", sql: "sql", yaml: "yml", toml: "toml",
+  go: "go", java: "java", c: "c", cpp: "cpp", csharp: "cs",
+  diff: "txt",
+};
+
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
   const [copied, setCopied] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [name, setName] = useState("");
+  const [saved, setSaved] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { html } = useMemo(() => highlightCode(code, lang), [code, lang]);
+  const { root, refreshTree } = useProject();
+
   const copy = () => {
     navigator.clipboard.writeText(code).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
   };
+
+  const startApply = () => {
+    const ext = EXT_BY_LANG[(lang || "").toLowerCase()] ?? "txt";
+    const stamp = new Date();
+    const hh = String(stamp.getHours()).padStart(2, "0");
+    const mm = String(stamp.getMinutes()).padStart(2, "0");
+    const ss = String(stamp.getSeconds()).padStart(2, "0");
+    setName(`snippet-${hh}${mm}${ss}.${ext}`);
+    setApplying(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      const dot = `snippet-${hh}${mm}${ss}`.length;
+      inputRef.current?.setSelectionRange(0, dot);
+    }, 20);
+  };
+
+  const apply = async () => {
+    const rel = name.trim().replace(/^\/+/, "");
+    if (!rel || !root) return;
+    try {
+      await api.fsWrite(rel, code.endsWith("\n") ? code : `${code}\n`, root);
+      void refreshTree();
+      setApplying(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      useUi.getState().toast(`Saved to ${rel}`, "ok");
+    } catch (e) {
+      useUi.getState().toast(`Could not save: ${String(e)}`, "error");
+    }
+  };
+
   return (
     <div className="codeblock">
       <div className="codeblock-head">
         <span className="codeblock-lang">{lang || "code"}</span>
-        <button className="icon-btn" onClick={copy} title="Copy code" aria-label="Copy code">
-          {copied ? <IconCheck size={13} /> : <IconCopy size={13} />}
-        </button>
+        <span className="codeblock-actions">
+          {applying ? (
+            <>
+              <input
+                ref={inputRef}
+                className="codeblock-apply-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void apply();
+                  if (e.key === "Escape") setApplying(false);
+                }}
+                onBlur={() => setApplying(false)}
+                aria-label="File name in workspace"
+                spellCheck={false}
+              />
+              <button className="codeblock-apply" onMouseDown={(e) => e.preventDefault()} onClick={() => void apply()}>
+                <IconCheck size={12} /> Save
+              </button>
+            </>
+          ) : (
+            <>
+              {root && (
+                <button
+                  className="codeblock-apply"
+                  onClick={startApply}
+                  title="Save this snippet into the open workspace"
+                >
+                  {saved ? <IconCheck size={12} /> : <IconFolder size={12} />}
+                  {saved ? "Saved" : "Apply to Workspace"}
+                </button>
+              )}
+              <button className="icon-btn" onClick={copy} title="Copy code" aria-label="Copy code">
+                {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
+              </button>
+            </>
+          )}
+        </span>
       </div>
       <pre>
         <code className={`hljs`} dangerouslySetInnerHTML={{ __html: html }} />

@@ -5,7 +5,7 @@ import { api } from "../core/api/ipc";
 import { openFolderPicker } from "./CommandPalette";
 import { open as saveDialog } from "@tauri-apps/plugin-dialog";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { IconX, IconRefresh, IconTrash, IconKey, IconCheck, IconAlert } from "./icons";
+import { IconX, IconRefresh, IconTrash, IconKey, IconCheck, IconAlert, IconEye, IconEyeOff } from "./icons";
 import { formatRelativeTime } from "../core/util/misc";
 import type { PermissionMode, ProviderConfig } from "../core/types";
 
@@ -43,17 +43,19 @@ export function SettingsDialog() {
           </button>
         </div>
         <div className="settings-body">
-          {section === "general" && <GeneralSection />}
-          {section === "appearance" && <AppearanceSection />}
-          {section === "providers" && <ProvidersSection />}
-          {section === "models" && <ModelsSection />}
-          {section === "agent" && <AgentSection />}
-          {section === "tools" && <ToolsSection />}
-          {section === "terminal" && <TerminalSection />}
-          {section === "projects" && <ProjectsSection />}
-          {section === "usage" && <UsageSection />}
-          {section === "shortcuts" && <ShortcutsSection />}
-          {section === "advanced" && <AdvancedSection />}
+          <div className="settings-section" key={section}>
+            {section === "general" && <GeneralSection />}
+            {section === "appearance" && <AppearanceSection />}
+            {section === "providers" && <ProvidersSection />}
+            {section === "models" && <ModelsSection />}
+            {section === "agent" && <AgentSection />}
+            {section === "tools" && <ToolsSection />}
+            {section === "terminal" && <TerminalSection />}
+            {section === "projects" && <ProjectsSection />}
+            {section === "usage" && <UsageSection />}
+            {section === "shortcuts" && <ShortcutsSection />}
+            {section === "advanced" && <AdvancedSection />}
+          </div>
         </div>
       </div>
     </div>
@@ -75,6 +77,32 @@ function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: bool
     <button className={`toggle${value ? " on" : ""}`} onClick={() => onChange(!value)} role="switch" aria-checked={value} aria-label={label}>
       <span className="toggle-knob" />
     </button>
+  );
+}
+
+/** Accent-filled range slider: fill portion is driven by the --range-fill CSS var. */
+function Slider({
+  value, min, max, step, onChange, label,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  onChange: (v: number) => void;
+  label: string;
+}) {
+  const pct = Math.round(((value - min) / (max - min)) * 100);
+  return (
+    <input
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      style={{ "--range-fill": `${pct}%` } as React.CSSProperties}
+      aria-label={label}
+    />
   );
 }
 
@@ -112,11 +140,12 @@ function AppearanceSection() {
         </select>
       </Field>
       <Field label={`Font size: ${settings.appearance.fontSize}px`}>
-        <input
-          type="range" min={11} max={17}
+        <Slider
           value={settings.appearance.fontSize}
-          onChange={(e) => void update((s) => { s.appearance.fontSize = Number(e.target.value); })}
-          aria-label="Font size"
+          min={11}
+          max={17}
+          label="Font size"
+          onChange={(v) => void update((s) => { s.appearance.fontSize = v; })}
         />
       </Field>
     </>
@@ -128,6 +157,7 @@ function ProvidersSection() {
   const [customName, setCustomName] = useState("");
   const [customUrl, setCustomUrl] = useState("");
   const [keyDrafts, setKeyDrafts] = useState<Record<string, string>>({});
+  const [keyVisible, setKeyVisible] = useState<Record<string, boolean>>({});
 
   const setProvider = (id: string, mutate: (p: ProviderConfig) => void) => {
     void update((s) => {
@@ -196,14 +226,25 @@ function ProvidersSection() {
             {p.requiresKey && (
               <Field label="API key" hint="Your API key is used to access this provider. It is stored securely on this device.">
                 <div className="key-row">
-                  <input
-                    type="password"
-                    placeholder={keyPresent[p.id] ? "•••• saved - enter to replace" : "Enter API key"}
-                    value={keyDrafts[p.id] ?? ""}
-                    onChange={(e) => setKeyDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
-                    onKeyDown={(e) => { if (e.key === "Enter") void saveKey(p.id); }}
-                    aria-label={`${p.name} API key`}
-                  />
+                  <div className="key-wrap">
+                    <input
+                      type={keyVisible[p.id] ? "text" : "password"}
+                      placeholder={keyPresent[p.id] ? "•••• saved - enter to replace" : "Enter API key"}
+                      value={keyDrafts[p.id] ?? ""}
+                      onChange={(e) => setKeyDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === "Enter") void saveKey(p.id); }}
+                      aria-label={`${p.name} API key`}
+                    />
+                    <button
+                      type="button"
+                      className="key-visibility"
+                      onClick={() => setKeyVisible((v) => ({ ...v, [p.id]: !v[p.id] }))}
+                      aria-label={keyVisible[p.id] ? "Hide API key" : "Show API key"}
+                      title={keyVisible[p.id] ? "Hide API key" : "Show API key"}
+                    >
+                      {keyVisible[p.id] ? <IconEyeOff size={13} /> : <IconEye size={13} />}
+                    </button>
+                  </div>
                   <button className="btn small" onClick={() => void saveKey(p.id)}><IconKey size={12} /> Save</button>
                   {keyPresent[p.id] && (
                     <button className="btn small ghost" onClick={() => void removeKey(p.id)}><IconTrash size={12} /></button>
@@ -327,19 +368,22 @@ function AgentSection() {
     <>
       <h3>Agent</h3>
       <Field label={`Max tool iterations per turn: ${settings.agent.maxIterations}`}>
-        <input
-          type="range" min={5} max={50}
+        <Slider
           value={settings.agent.maxIterations}
-          onChange={(e) => void update((s) => { s.agent.maxIterations = Number(e.target.value); })}
-          aria-label="Max iterations"
+          min={5}
+          max={50}
+          label="Max iterations"
+          onChange={(v) => void update((s) => { s.agent.maxIterations = v; })}
         />
       </Field>
       <Field label={`Context budget: ${settings.agent.contextBudgetTokens} tokens (est.)`}>
-        <input
-          type="range" min={4000} max={100000} step={2000}
+        <Slider
           value={settings.agent.contextBudgetTokens}
-          onChange={(e) => void update((s) => { s.agent.contextBudgetTokens = Number(e.target.value); })}
-          aria-label="Context budget"
+          min={4000}
+          max={100000}
+          step={2000}
+          label="Context budget"
+          onChange={(v) => void update((s) => { s.agent.contextBudgetTokens = v; })}
         />
       </Field>
     </>
@@ -394,11 +438,13 @@ function TerminalSection() {
         </select>
       </Field>
       <Field label={`Command timeout (agent tools): ${settings.terminal.timeoutSecs}s`}>
-        <input
-          type="range" min={10} max={600} step={10}
+        <Slider
           value={settings.terminal.timeoutSecs}
-          onChange={(e) => void update((s) => { s.terminal.timeoutSecs = Number(e.target.value); })}
-          aria-label="Terminal timeout"
+          min={10}
+          max={600}
+          step={10}
+          label="Terminal timeout"
+          onChange={(v) => void update((s) => { s.terminal.timeoutSecs = v; })}
         />
       </Field>
     </>

@@ -55,6 +55,7 @@ pub fn run() {
             commands::tools::tool_execute,
             commands::tools::command_risk,
             commands::tools::fs_read,
+            commands::tools::fs_read_data_url,
             commands::tools::fs_write,
             commands::tools::fs_list_dir,
             commands::tools::fs_tree,

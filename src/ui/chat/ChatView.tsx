@@ -74,10 +74,10 @@ function EmptyState() {
     <div className="empty-state">
       <div className="empty-hero" aria-hidden>
         <svg width="30" height="30" viewBox="0 0 24 24">
-          <rect x="1.5" y="1.5" width="21" height="21" rx="5.5" fill="none" stroke="#2a2f36" strokeWidth="1" />
-          <rect x="6.2" y="5" width="3" height="14" rx="0.5" fill="#7cb342" />
-          <rect x="6.2" y="5" width="11.5" height="3" rx="0.5" fill="#7cb342" />
-          <rect x="6.2" y="10.4" width="9" height="2.4" rx="0.5" fill="#4f7d2a" />
+          <rect x="1.5" y="1.5" width="21" height="21" rx="6" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+          <rect x="6.2" y="5" width="3" height="14" rx="1" fill="#818cf8" />
+          <rect x="6.2" y="5" width="11.5" height="3" rx="1" fill="#818cf8" />
+          <rect x="6.2" y="10.4" width="9" height="2.4" rx="1" fill="#6366f1" opacity="0.85" />
         </svg>
       </div>
       <div className="empty-title">Fcode</div>
@@ -406,7 +406,7 @@ function toolIcon(tool: string) {
 function ActivityRow({ item }: { item: ActivityItem }) {
   const [open, setOpen] = useState(false);
   const statusIcon =
-    item.status === "running" ? <span className="act-spinner" aria-label="running" />
+    item.status === "running" ? <span className="act-pulse" aria-label="running" />
       : item.status === "ok" ? <IconCheck size={12} className="ok" />
       : item.status === "denied" ? <IconBolt size={12} className="denied" />
       : <IconAlert size={12} className="err" />;
@@ -553,6 +553,7 @@ function DiffApproval({
 function Composer() {
   const { send, stop, streaming, mode, setMode } = useChat();
   const { settings } = useSettings();
+  const { openPalette } = useUi();
   const [text, setText] = useState("");
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -586,6 +587,9 @@ function Composer() {
             } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
               e.preventDefault();
               submit();
+            } else if (e.key === "/" && text === "" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+              e.preventDefault();
+              openPalette();
             }
           }}
           aria-label="Message"
@@ -607,8 +611,16 @@ function Composer() {
               <IconWrench size={11} /> Agent
             </button>
           </div>
-          <span className="composer-hint">
-            {mode === "agent" ? "tools require approval" : "Enter to send · Shift+Enter newline"}
+          <span className="composer-hints">
+            {streaming ? (
+              <span className="hint-kbd"><kbd>Esc</kbd> stop</span>
+            ) : (
+              <>
+                <span className="hint-kbd"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> send</span>
+                {!settings.general.sendOnEnter && <span className="hint-kbd"><kbd>Shift</kbd>+<kbd>Enter</kbd> newline</span>}
+              </>
+            )}
+            <span className="hint-kbd"><kbd>/</kbd> commands</span>
           </span>
           <span className="spacer" />
           {streaming ? (
@@ -616,7 +628,7 @@ function Composer() {
               <IconStop size={14} />
             </button>
           ) : (
-            <button className="send-btn" onClick={submit} disabled={!text.trim()} title="Send (Enter)" aria-label="Send message">
+            <button className="send-btn" onClick={submit} disabled={!text.trim()} title="Send (Ctrl+Enter)" aria-label="Send message">
               <IconSend size={14} />
             </button>
           )}

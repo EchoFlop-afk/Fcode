@@ -75,6 +75,17 @@ pub fn fs_read(
 }
 
 #[tauri::command]
+pub fn fs_read_data_url(
+    app: AppHandle,
+    path: String,
+    project_root: Option<String>,
+) -> Result<tools::fs::ImageData, AppError> {
+    let state = app.state::<AppState>();
+    let root = resolve_project_root(state.inner(), project_root)?;
+    tools::fs::fs_read_data_url(&root, &path)
+}
+
+#[tauri::command]
 pub fn fs_write(
     app: AppHandle,
     path: String,

@@ -139,6 +139,11 @@ export const api = {
       path,
       projectRoot,
     }),
+  fsReadDataUrl: (path: string, projectRoot?: string) =>
+    invoke<{ dataUrl: string; size: number }>("fs_read_data_url", {
+      path,
+      projectRoot,
+    }),
   fsWrite: (path: string, content: string, projectRoot?: string) =>
     invoke<number>("fs_write", { path, content, projectRoot }),
   fsListDir: (path: string, projectRoot?: string) =>

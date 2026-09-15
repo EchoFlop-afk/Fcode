@@ -72,6 +72,54 @@ pub fn fs_read(root: &Path, rel: &str) -> AppResult<ReadResult> {
     Ok(ReadResult { content, truncated, size })
 }
 
+const MAX_IMAGE_BYTES: u64 = 20 * 1024 * 1024;
+
+fn image_mime(path: &Path) -> Option<&'static str> {
+    let ext = path.extension()?.to_str()?.to_lowercase();
+    Some(match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "bmp" => "image/bmp",
+        "ico" => "image/x-icon",
+        "svg" => "image/svg+xml",
+        "avif" => "image/avif",
+        _ => return None,
+    })
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageData {
+    pub data_url: String,
+    pub size: u64,
+}
+
+/// Reads a previewable image file and returns it as a base64 data URL.
+pub fn fs_read_data_url(root: &Path, rel: &str) -> AppResult<ImageData> {
+    use base64::Engine as _;
+    let path = validate_path(root, rel)?;
+    let meta = fs::metadata(&path)
+        .map_err(|_| AppError::bad_request(format!("File not found: {rel}")))?;
+    if meta.is_dir() {
+        return Err(AppError::bad_request(format!("Path is a directory: {rel}")));
+    }
+    let mime = image_mime(&path)
+        .ok_or_else(|| AppError::bad_request(format!("Not a previewable image: {rel}")))?;
+    if meta.len() > MAX_IMAGE_BYTES {
+        return Err(AppError::bad_request(
+            "Image exceeds the 20 MB preview limit",
+        ));
+    }
+    let bytes = fs::read(&path)?;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(bytes);
+    Ok(ImageData {
+        data_url: format!("data:{mime};base64,{b64}"),
+        size: meta.len(),
+    })
+}
+
 pub fn fs_write(root: &Path, rel: &str, content: &str) -> AppResult<u64> {
     if content.len() > MAX_WRITE_BYTES {
         return Err(AppError::bad_request("File content exceeds the 2 MB limit"));

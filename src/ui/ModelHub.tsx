@@ -82,27 +82,28 @@ export function ModelHub() {
       <div className="hub-head">
         <div>
           <h2>Models</h2>
-          <p className="hub-sub">
-            {settings.models.catalogRefreshedAt
-              ? `Live catalogs refreshed ${formatRelativeTime(settings.models.catalogRefreshedAt)}`
-              : "Seed catalog shown - refresh to discover live provider models"}
-          </p>
         </div>
         <div className="hub-actions">
-          <div className="side-search">
-            <IconSearch size={13} />
-            <input placeholder="Search models" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search models" />
-          </div>
           <button className="btn small" onClick={() => void refreshAllModels()}>
-            <IconRefresh size={12} /> Refresh
+            <IconRefresh size={11} /> Refresh
           </button>
           <button className="btn small ghost" onClick={() => openSettings("providers")}>
             Providers
           </button>
         </div>
       </div>
+      <p className="hub-sub">
+        {settings.models.catalogRefreshedAt
+          ? `catalog refreshed ${formatRelativeTime(settings.models.catalogRefreshedAt)}`
+          : "seed catalog shown — refresh to discover live provider models"}
+      </p>
 
       <div className="hub-filters">
+        <div className="side-search">
+          <IconSearch size={12} />
+          <input placeholder="Search models" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search models" />
+        </div>
+        <span className="filter-sep" />
         {SECTIONS.map((s) => (
           <button key={s.id} className={`chip-btn${section === s.id ? " active" : ""}`} onClick={() => setSection(s.id)}>
             {s.label}
@@ -116,7 +117,7 @@ export function ModelHub() {
             onClick={() => setProviderFilter(providerFilter === p ? null : p)}
           >
             {p}
-            {providerStatus[p]?.status === "connected" ? " ●" : ""}
+            {providerStatus[p]?.status === "connected" && <span className="provider-dot ok" />}
           </button>
         ))}
       </div>
@@ -151,29 +152,38 @@ function ModelCard({
   onUse: () => void;
   onFav: () => void;
 }) {
-  const tag = accessTag(model);
+  const caps = [
+    model.coding && "Coding",
+    model.reasoning && "Reasoning",
+    model.vision && "Vision",
+    model.tools && "Tools",
+  ].filter(Boolean) as string[];
   return (
     <div className={`model-card${active ? " active" : ""}`}>
       <div className="model-card-head">
         <span className="model-card-name" title={model.description}>{model.name || model.id}</span>
-        <span className="tag" data-access={tag.toLowerCase()}>{tag}</span>
+        <span className="tag" data-access={accessTag(model).toLowerCase()}>{accessTag(model)}</span>
         <span className="spacer" />
-        <button className={`icon-btn fav${favorite ? " on" : ""}`} onClick={onFav} aria-label="Toggle favorite">
-          <IconStar size={13} />
+        <button
+          className={`icon-btn fav${favorite ? " on" : ""}`}
+          onClick={onFav}
+          aria-label={favorite ? "Remove favorite" : "Add favorite"}
+          title={favorite ? "Remove favorite" : "Add favorite"}
+        >
+          <IconStar size={12} />
         </button>
         {active ? (
           <span className="model-card-active"><IconCheck size={12} /> Active</span>
         ) : (
-          <button className="btn small primary" onClick={onUse}>Use Model</button>
+          <button className="btn small" onClick={onUse}>Use Model</button>
         )}
       </div>
       <div className="model-card-meta">
-        <span>{model.provider}</span>
-        <span>{formatContextWindow(model.contextWindow)}</span>
-        {model.coding && <span className="cap">Coding</span>}
-        {model.reasoning && <span className="cap">Reasoning</span>}
-        {model.vision && <span className="cap">Vision</span>}
-        {model.tools && <span className="cap">Tools</span>}
+        <span className="cap-pill">{model.provider}</span>
+        <span className="cap-pill">{formatContextWindow(model.contextWindow)}</span>
+        {caps.map((c) => (
+          <span key={c} className="cap-pill">{c}</span>
+        ))}
       </div>
       {model.description && <div className="model-card-desc">{model.description}</div>}
       {model.outputPricePerM > 0 && (

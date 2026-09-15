@@ -143,10 +143,10 @@ export function ModelSelector() {
                     <span className="model-row-name">{m.name || m.id}</span>
                     <span className="model-row-id">{m.id}</span>
                     <span className="tag" data-access={accessTag(m).toLowerCase()}>{accessTag(m)}</span>
-                    {m.coding && <span className="cap" title="Coding">{"</>"}</span>}
-                    {m.reasoning && <span className="cap" title="Reasoning">R</span>}
-                    {m.vision && <span className="cap" title="Vision">V</span>}
-                    {m.tools && <span className="cap" title="Tools">T</span>}
+                    {m.coding && <span className="cap-pill tiny" title="Coding">{"</>"}</span>}
+                    {m.reasoning && <span className="cap-pill tiny" title="Reasoning">R</span>}
+                    {m.vision && <span className="cap-pill tiny" title="Vision">V</span>}
+                    {m.tools && <span className="cap-pill tiny" title="Tools">T</span>}
                     <span className="model-row-ctx">{formatContextWindow(m.contextWindow)}</span>
                     <button
                       className={`icon-btn fav${favorites.includes(m.fullId) ? " on" : ""}`}

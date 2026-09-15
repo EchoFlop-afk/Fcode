@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { api } from "../core/api/ipc";
 import { useSettings } from "./settings";
+import { useUi } from "./ui";
 import type { FileEntry, GitStatus } from "../core/types";
 
 export interface EditorTab {
@@ -9,7 +10,11 @@ export interface EditorTab {
   original: string;
   dirty: boolean;
   truncated: boolean;
+  /** image preview tabs carry a data URL instead of text content */
+  image?: { dataUrl: string; size: number };
 }
+
+const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "svg", "avif"]);
 
 interface ProjectState {
   root: string | null;
@@ -37,6 +42,15 @@ interface ProjectState {
 function dirName(p: string): string {
   const idx = p.lastIndexOf("/");
   return idx === -1 ? "" : p.slice(0, idx);
+}
+
+function expandParent(path: string): void {
+  const dir = dirName(path);
+  if (dir) {
+    const next = new Set(useProject.getState().expandedDirs);
+    next.add(dir);
+    useProject.setState({ expandedDirs: next });
+  }
 }
 
 export const useProject = create<ProjectState>((set, get) => ({
@@ -92,6 +106,23 @@ export const useProject = create<ProjectState>((set, get) => ({
       set({ activeTab: path });
       return;
     }
+    const ext = path.split(".").pop()?.toLowerCase() ?? "";
+    if (IMAGE_EXTS.has(ext)) {
+      const img = await api.fsReadDataUrl(path, root).catch(() => null);
+      if (!img) {
+        useUi.getState().toast(`Could not load image: ${path}`, "error");
+        return;
+      }
+      set((s) => ({
+        tabs: [
+          ...s.tabs,
+          { path, content: "", original: "", dirty: false, truncated: false, image: { dataUrl: img.dataUrl, size: img.size } },
+        ],
+        activeTab: path,
+      }));
+      expandParent(path);
+      return;
+    }
     const r = await api.fsRead(path, root).catch(() => null);
     if (!r) return;
     set((s) => ({
@@ -101,13 +132,7 @@ export const useProject = create<ProjectState>((set, get) => ({
       ],
       activeTab: path,
     }));
-    // expand parent dir
-    const dir = dirName(path);
-    if (dir) {
-      const next = new Set(get().expandedDirs);
-      next.add(dir);
-      set({ expandedDirs: next });
-    }
+    expandParent(path);
   },
 
   closeTab: (path) => {
@@ -124,6 +149,8 @@ export const useProject = create<ProjectState>((set, get) => ({
   setActiveTab: (path) => set({ activeTab: path }),
 
   updateBuffer: (path, content) => {
+    const tab = get().tabs.find((t) => t.path === path);
+    if (tab?.image) return;
     set((s) => ({
       tabs: s.tabs.map((t) =>
         t.path === path ? { ...t, content, dirty: content !== t.original } : t
@@ -134,7 +161,7 @@ export const useProject = create<ProjectState>((set, get) => ({
   saveTab: async (path) => {
     const root = get().root;
     const tab = get().tabs.find((t) => t.path === path);
-    if (!root || !tab) return;
+    if (!root || !tab || tab.image) return;
     await api.fsWrite(path, tab.content, root);
     set((s) => ({
       tabs: s.tabs.map((t) =>
@@ -146,7 +173,8 @@ export const useProject = create<ProjectState>((set, get) => ({
 
   reloadTab: async (path) => {
     const root = get().root;
-    if (!root) return;
+    const tab = get().tabs.find((t) => t.path === path);
+    if (!root || !tab || tab.image) return;
     const r = await api.fsRead(path, root).catch(() => null);
     if (!r) return;
     set((s) => ({

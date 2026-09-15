@@ -13,8 +13,9 @@ import { python } from "@codemirror/lang-python";
 import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { rust } from "@codemirror/lang-rust";
-import { useProject } from "../../state/project";
+import { useProject, type EditorTab } from "../../state/project";
 import { IconSave } from "../icons";
+import { ImagePreview } from "./ImagePreview";
 
 const COMPARTMENT = new Compartment();
 
@@ -42,7 +43,7 @@ function languageFor(path: string) {
   }
 }
 
-// Restrained theme matching the app tokens.
+// Flat theme matching the app tokens (indigo accent).
 const fcodeTheme = EditorView.theme({
   "&": { backgroundColor: "var(--bg0)", color: "var(--text)", fontSize: "12.5px" },
   ".cm-content": { fontFamily: "var(--mono)", caretColor: "var(--accent)", padding: "10px 0" },
@@ -53,48 +54,39 @@ const fcodeTheme = EditorView.theme({
     borderRight: "1px solid var(--line)",
   },
   ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--dim)" },
-  ".cm-activeLine": { backgroundColor: "rgba(124,179,66,0.045)" },
-  ".cm-selectionBackground, ::selection": { backgroundColor: "rgba(124,179,66,0.22) !important" },
+  ".cm-activeLine": { backgroundColor: "rgba(255,255,255,0.03)" },
+  ".cm-selectionBackground, ::selection": { backgroundColor: "rgba(99,102,241,0.25) !important" },
   ".cm-cursor": { borderLeftColor: "var(--accent)" },
   ".cm-scroller": { overflow: "auto", lineHeight: "1.6" },
-  ".cm-tooltip": { backgroundColor: "var(--bg2)", border: "1px solid var(--line2)", borderRadius: "8px" },
+  ".cm-tooltip": { backgroundColor: "var(--overlay)", border: "1px solid var(--line2)", borderRadius: "5px" },
   ".cm-panels": { backgroundColor: "var(--bg2)", color: "var(--text)" },
-  ".cm-searchMatch": { backgroundColor: "rgba(124,179,66,0.18)" },
-  ".cm-searchMatch-selected": { backgroundColor: "rgba(124,179,66,0.35)" },
+  ".cm-searchMatch": { backgroundColor: "rgba(99,102,241,0.22)" },
+  ".cm-searchMatch-selected": { backgroundColor: "rgba(99,102,241,0.45)" },
 });
 
-export function EditorPane() {
-  const { tabs, activeTab, updateBuffer, saveTab, reloadTab } = useProject();
+/** Text editor for a single file tab. Keyed by path so it mounts fresh. */
+function TextEditor({ tab }: { tab: EditorTab }) {
+  const { updateBuffer, saveTab, reloadTab } = useProject();
   const parentRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const currentPathRef = useRef<string | null>(null);
-
-  const tab = tabs.find((t) => t.path === activeTab) ?? null;
 
   useEffect(() => {
     if (!parentRef.current) return;
-    if (!viewRef.current) {
-      const view = new EditorView({
-        parent: parentRef.current,
-        state: EditorState.create({ doc: "" }),
-      });
-      viewRef.current = view;
-    }
+    const view = new EditorView({
+      parent: parentRef.current,
+      state: EditorState.create({ doc: tab.content }),
+    });
+    viewRef.current = view;
     return () => {
-      viewRef.current?.destroy();
+      view.destroy();
       viewRef.current = null;
     };
-  }, []);
+  }, [tab.path]);
 
-  // (re)configure when the active tab changes
+  // (re)configure extensions when the file changes
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    if (!tab) {
-      currentPathRef.current = null;
-      view.setState(EditorState.create({ doc: "" }));
-      return;
-    }
     const exts = [
       lineNumbers(),
       highlightSpecialChars(),
@@ -128,22 +120,13 @@ export function EditorPane() {
       ]),
       fcodeTheme,
       EditorView.updateListener.of((update) => {
-        if (update.docChanged && currentPathRef.current) {
-          updateBuffer(currentPathRef.current, update.state.doc.toString());
+        if (update.docChanged) {
+          updateBuffer(tab.path, update.state.doc.toString());
         }
       }),
     ];
     view.setState(EditorState.create({ doc: tab.content, extensions: exts }));
-    currentPathRef.current = tab.path;
-  }, [activeTab, tabs.length]);
-
-  if (!tab) {
-    return (
-      <div className="editor-pane empty">
-        <p>Select a file to edit</p>
-      </div>
-    );
-  }
+  }, [tab.path]);
 
   return (
     <div className="editor-pane">
@@ -168,3 +151,21 @@ export function EditorPane() {
   );
 }
 
+export function EditorPane() {
+  const { tabs, activeTab } = useProject();
+  const tab = tabs.find((t) => t.path === activeTab) ?? null;
+
+  if (!tab) {
+    return (
+      <div className="editor-pane empty">
+        <p>Select a file to edit</p>
+      </div>
+    );
+  }
+
+  if (tab.image) {
+    return <ImagePreview key={tab.path} tab={tab} />;
+  }
+
+  return <TextEditor key={tab.path} tab={tab} />;
+}

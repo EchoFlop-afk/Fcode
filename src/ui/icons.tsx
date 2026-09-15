@@ -85,6 +85,13 @@ export const IconBrain = (p: P) => (
 export const IconEye = (p: P) => (
   <svg {...base(p)}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
 );
+export const IconEyeOff = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M9.9 5.2A9.8 9.8 0 0 1 12 5c6.5 0 10 7 10 7a17.4 17.4 0 0 1-2.4 3.3M6.1 6.1A16.7 16.7 0 0 0 2 12s3.5 7 10 7a9.9 9.9 0 0 0 5.9-1.9" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    <path d="m3 3 18 18" />
+  </svg>
+);
 export const IconCode = (p: P) => (
   <svg {...base(p)}><path d="m8 6-6 6 6 6M16 6l6 6-6 6" /></svg>
 );
@@ -93,6 +100,13 @@ export const IconWrench = (p: P) => (
 );
 export const IconChart = (p: P) => (
   <svg {...base(p)}><path d="M3 3v18h18" /><path d="M7 15v3M12 10v8M17 6v12" /></svg>
+);
+export const IconCpu = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="5" y="5" width="14" height="14" rx="2" />
+    <rect x="9.5" y="9.5" width="5" height="5" rx="0.5" />
+    <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" />
+  </svg>
 );
 export const IconKey = (p: P) => (
   <svg {...base(p)}><circle cx="7.5" cy="15.5" r="4.5" /><path d="m11 12 9-9m-4 4 3 3m-6 0 3 3" /></svg>
@@ -117,6 +131,13 @@ export const IconUpload = (p: P) => (
 );
 export const IconSidebar = (p: P) => (
   <svg {...base(p)}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></svg>
+);
+export const IconChecker = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <rect x="3.8" y="3.8" width="7.8" height="7.8" fill="currentColor" stroke="none" opacity="0.55" />
+    <rect x="12.4" y="12.4" width="7.8" height="7.8" fill="currentColor" stroke="none" opacity="0.55" />
+  </svg>
 );
 export const IconSave = (p: P) => (
   <svg {...base(p)}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8M7 3v5h8" /></svg>
